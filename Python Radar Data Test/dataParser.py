@@ -1,78 +1,98 @@
+import ast
 import struct
 
-# Define message header structure (based on MmwDemo_output_message_header)
-HEADER_FORMAT = "<Q 10H 2I"
-HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
+# Read the file content
+with open('binaryData.txt', 'r') as file:
+    data = file.read().strip()
 
-# Define TLV structure
-TLV_FORMAT = "<I I I"
-TLV_SIZE = struct.calcsize(TLV_FORMAT)
+# Parse the content into a bytes object
+byteData = ast.literal_eval(data)
 
-# Define detected object structure (example, assuming 4 integers per object)
-OBJ_FORMAT = "<4h"  # (x, y, z, velocity) in Q format
-OBJ_SIZE = struct.calcsize(OBJ_FORMAT)
+# Convert bytes to space-separated two-digit decimal strings
+decimal_str = ' '.join(f"{byte:02d}" for byte in byteData)
 
-def parse_radar_output(binary_data):
-    """ Parses radar output binary message dynamically """
+# Separate each frame by new line
+# Define the target sequence and replacement
+barkerCode = "02 01 04 03 06 05 08 07"
+replacement = "\n" + barkerCode
 
-    offset = 0
-    if len(binary_data) < HEADER_SIZE:
-        print("Error: Incomplete header")
-        return
+# Replace all occurrences of the target sequence
+modified_str = decimal_str.replace(barkerCode, replacement)
 
-    # Parse Header
-    header = struct.unpack_from(HEADER_FORMAT, binary_data, offset)
-    offset += HEADER_SIZE
+# Write the result to "filteredData.txt"
+with open('filteredData.txt', 'w') as output_file:
+    output_file.write(modified_str)
 
-    magic_word = header[:4]
-    num_detected_obj = header[4]
-    num_tlvs = header[5]
-    total_packet_len = header[6]
-    frame_number = header[8]
-    
-    print(f"Magic Word: {magic_word}")
-    print(f"Number of Detected Objects: {num_detected_obj}")
-    print(f"Number of TLVs: {num_tlvs}")
-    print(f"Total Packet Length: {total_packet_len}")
-    print(f"Frame Number: {frame_number}\n")
+# Open "filterData.txt" in read mode
+with open("filteredData.txt", 'r') as file:
+    lines = file.readlines()  # Read all lines once
 
-    parsed_tlvs = {}
+    # Read through the file to find barker code and ensure that 76 bytes can be read ahead
+    for i, line in enumerate(lines):
+        if line.strip() == "":  # Skip empty lines
+            continue
+        elif i + 76 < len(lines):  # Ensure index does not go out of range
+            frame = lines[i + 76].split()  # Get the line 76 places ahead
+            # Print barker or sync code bytes
+            print("sync", frame[:8])
 
-    # Parse TLVs dynamically
-    for _ in range(num_tlvs):
-        if offset + TLV_SIZE > len(binary_data):
-            print("Error: Incomplete TLV header")
-            break
+            # Print range values (4)
+            print("range", frame[60:64])
 
-        # Read TLV
-        tlv_type, tlv_length, tlv_address = struct.unpack_from(TLV_FORMAT, binary_data, offset)
-        offset += TLV_SIZE
+            # Convert range to bytes and unpack as float
+            deicmalRangeList = [frame[60], frame[61], frame[62], frame[63]]
+            bytesRange = bytes(int(x) for x in deicmalRangeList)
+            floatValueRange = struct.unpack('f', bytesRange)[0]
+            print(f"Float Range: {floatValueRange}")
 
-        print(f"TLV Type: {tlv_type}, Length: {tlv_length}, Address: {hex(tlv_address)}")
 
-        # Parse TLV based on type
-        tlv_data = []
-        num_objects = tlv_length // OBJ_SIZE
-        
-        for i in range(num_objects):
-            if offset + OBJ_SIZE > len(binary_data):
-                print(f"Error: Incomplete data for TLV Type {tlv_type}")
-                break
+            # **Implement try catch for when azimuth, doppler, and SNR are not full
+            print("azimuth", frame[64:68])
 
-            obj_data = struct.unpack_from(OBJ_FORMAT, binary_data, offset)
-            tlv_data.append(obj_data)
-            offset += OBJ_SIZE
+            # Ensure there are at least 4 values for azimuth
+            if len(frame) < 68:
+                print("Azimuth reading is null")
+            else:
+                deicmalAzimuthList = [frame[64], frame[65], frame[66], frame[67]]
 
-        parsed_tlvs[tlv_type] = tlv_data
+                try:
+                    # Convert to bytes and unpack as float
+                    bytesAzimuth = bytes(int(x) for x in deicmalAzimuthList)
+                    floatValueAzimuth = struct.unpack('f', bytesAzimuth)[0]
+                    print(f"Float Azimuth: {floatValueAzimuth}")
+                except ValueError:
+                    print("Invalid Azimuth data")
 
-    print("\nParsed TLV Data:")
-    for tlv_type, data in parsed_tlvs.items():
-        print(f"TLV {tlv_type}: {data}")
+            # Print doppler values (4)
+            print("doppler", frame[68:72])
 
-    return parsed_tlvs
+            # Ensure there are at least 4 values for azimuth
+            if len(frame) < 72:
+                print("Doppler reading is null")
+            else:
+                deicmalDopplerList = [frame[68], frame[69], frame[70], frame[71]]
 
-# Example: Reading a binary file and parsing
-#with open("radar_output.bin", "rb") as f:
-f = open("binaryData.bin", "rb")
-binary_data = f.read()
-parsed_data = parse_radar_output(binary_data)
+                try:
+                    # Convert to bytes and unpack as float
+                    bytesDoppler = bytes(int(x) for x in deicmalDopplerList)
+                    floatValueDoppler = struct.unpack('f', bytesDoppler)[0]
+                    print(f"Float Doppler: {floatValueDoppler}")
+                except ValueError:
+                    print("Invalid Doppler data")
+
+            # Print SNR values (4)
+            print("SNR", frame[72:76])
+
+            # Ensure there are at least 4 values for azimuth
+            if len(frame) < 76:
+                print("SNR reading is null")
+            else:
+                deicmalSNRList = [frame[72], frame[73], frame[74], frame[75]]
+
+                try:
+                    # Convert to bytes and unpack as float
+                    bytesSNR = bytes(int(x) for x in deicmalSNRList)
+                    floatValueSNR = struct.unpack('f', bytesSNR)[0]
+                    print(f"Float SNR: {floatValueSNR}")
+                except ValueError:
+                    print("Invalid SNR data")
