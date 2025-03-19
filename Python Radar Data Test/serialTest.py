@@ -6,7 +6,7 @@ import serial
 dataPort = serial.Serial('COM4', baudrate=921600, timeout=3.0)
 cliPort = serial.Serial('COM5', baudrate=115200, timeout=3.0)
 
-f = open("binaryData.bin", "w")
+f = open("binaryData.txt", "w")
 
 try:
     while True:
