@@ -3,6 +3,7 @@ from gpiozero import LED, TonalBuzzer
 #import serial
 #import dataParser
 from gpiozero.tones import Tone
+import dataParser
 
 #dataPort = serial.Serial('/dev/ttyAMA0', baudrate=921600)
 #cliPort = serial.Serial('/dev/ttyAMA0', baudrate=115200)
