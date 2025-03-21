@@ -21,7 +21,7 @@ try:#Make room for interrupts
     while True:#Loop forever
         #distance = float(input("What is the sample distance in meters? "))#Get sample distance data
         #speed = float(input("What is the sample speed in m/s? "))#Get sample speed data
-        distance, speed = parse()        
+        distance, speed = dateParser.parse()        
         time = float(distance/speed)#Calculate time until reaching the other object
         match time:                #Match case switch
             case _ if time>=2:#If time is greater than 2 seconds switch off everything and enable green light
