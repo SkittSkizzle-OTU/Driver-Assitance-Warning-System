@@ -101,10 +101,3 @@ def parse():
                     except ValueError:
                         print("Invalid SNR data")
     return range, doppler
-range, doppler = parse()
-range = [x * 10**41 for x in range]
-doppler = [x * 10**-38 if i %2 != 0 else x for i, x in enumerate(doppler)]
-doppler = [x * 10**42 if i %2 == 0 else x for i, x in enumerate(doppler)]
-collisionTime =  [abs(x) for x in [a/b for a,b in zip(range, doppler)]]
-
-i = 0
