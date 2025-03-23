@@ -2,11 +2,12 @@ import ast
 import struct
 
 def parse(): 
-    # Read the file content
+    # Creates a string representing the text in binaryData.txt
     with open('binaryData.txt', 'r') as file:
         data = file.read().strip()
 
-    # Parse the content into a bytes object
+    # Converts from str to data, trims 'b\', removes extra \ between each byte
+    #All stored in an array first byte is [0]
     byteData = ast.literal_eval(data)
 
     # Convert bytes to space-separated two-digit decimal strings
@@ -16,7 +17,8 @@ def parse():
     # Define the target sequence and replacement
     barkerCode = "02 01 04 03 06 05 08 07"
     replacement = "\n" + barkerCode
-
+    doppler = []
+    range = []
     # Replace all occurrences of the target sequence
     modified_str = decimal_str.replace(barkerCode, replacement)
 
@@ -35,20 +37,20 @@ def parse():
             elif i + 76 < len(lines):  # Ensure index does not go out of range
                 frame = lines[i + 76].split()  # Get the line 76 places ahead
                 # Print barker or sync code bytes
-                print("sync", frame[:8])
+                #print("sync", frame[:8])
 
                 # Print range values (4)
-                print("range", frame[60:64])
+                #print("range", frame[60:64])
 
                 # Convert range to bytes and unpack as float
                 deicmalRangeList = [frame[60], frame[61], frame[62], frame[63]]
                 bytesRange = bytes(int(x) for x in deicmalRangeList)
                 floatValueRange = struct.unpack('f', bytesRange)[0]
-                print(f"Float Range: {floatValueRange}")
-
+                #print(f"Float Range: {floatValueRange}")
+                range.append(floatValueRange)
 
                 # **Implement try catch for when azimuth, doppler, and SNR are not full
-                print("azimuth", frame[64:68])
+                #print("azimuth", frame[64:68])
 
                 # Ensure there are at least 4 values for azimuth
                 if len(frame) < 68:
@@ -65,7 +67,7 @@ def parse():
                         print("Invalid Azimuth data")
 
                 # Print doppler values (4)
-                print("doppler", frame[68:72])
+                #print("doppler", frame[68:72])
 
                 # Ensure there are at least 4 values for azimuth
                 if len(frame) < 72:
@@ -77,12 +79,13 @@ def parse():
                         # Convert to bytes and unpack as float
                         bytesDoppler = bytes(int(x) for x in deicmalDopplerList)
                         floatValueDoppler = struct.unpack('f', bytesDoppler)[0]
-                        print(f"Float Doppler: {floatValueDoppler}")
+                        #print(f"Float Doppler: {floatValueDoppler}")
+                        doppler.append(floatValueDoppler)
                     except ValueError:
                         print("Invalid Doppler data")
 
                 # Print SNR values (4)
-                print("SNR", frame[72:76])
+                #print("SNR", frame[72:76])
 
                 # Ensure there are at least 4 values for azimuth
                 if len(frame) < 76:
@@ -97,4 +100,11 @@ def parse():
                         print(f"Float SNR: {floatValueSNR}")
                     except ValueError:
                         print("Invalid SNR data")
-    return floatValueRange, floatValueDoppler
+    return range, doppler
+range, doppler = parse()
+range = [x * 10**41 for x in range]
+doppler = [x * 10**-38 if i %2 != 0 else x for i, x in enumerate(doppler)]
+doppler = [x * 10**42 if i %2 == 0 else x for i, x in enumerate(doppler)]
+collisionTime =  [abs(x) for x in [a/b for a,b in zip(range, doppler)]]
+
+i = 0
